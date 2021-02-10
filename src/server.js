@@ -1,5 +1,6 @@
 import express from "express"
 import bodyParser from "body-parser"
+import {MongoClient} from 'mongodb';
 
 const app = express();
 app.use(bodyParser.json())
@@ -30,6 +31,24 @@ const articlesInfo = {
 // app.get('/hello/:name', (req, res) => {
 //     res.send(`Hello ${req.params.name}`)
 // })
+
+
+app.get('/api/articles/:name', async (req, res) => {
+    try {
+        const articleName = req.params.name;
+        const uri = "mongodb+srv://jacinto:"+encodeURIComponent("D4VkaYik#lG5")+"@toilets-au.kbefj.mongodb.net/test?retryWrites=true&w=majority";
+        const client = await MongoClient.connect(uri,{ useNewUrlParser: true });
+        const db = client.db('test')
+        const articleInfo = await db.collection('test').findOne({name: articleName})
+        res.status(200).json(articleInfo);
+        console.log(articleInfo)
+        client.close()
+    } catch(err) {
+        console.log(err)
+        res.status(500).json({message: "something went wrong", err})
+    }
+    
+})
 
 app.post("/api/articles/:name/upvote", (req,res) => {
     const articleName = req.params.name;
