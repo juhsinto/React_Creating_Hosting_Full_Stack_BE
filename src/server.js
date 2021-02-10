@@ -1,23 +1,23 @@
 import express from "express"
 import bodyParser from "body-parser"
-import {MongoClient} from 'mongodb';
+import { MongoClient } from 'mongodb';
 
 const app = express();
 app.use(bodyParser.json())
 
 const articlesInfo = {
-	'learn-react': {
-		upvotes: 0,
+    'learn-react': {
+        upvotes: 0,
         comments: []
-	},
-	'learn-node': {
-		upvotes: 0,
+    },
+    'learn-node': {
+        upvotes: 0,
         comments: []
-	},
-	'my-thoughts-on-resumes': {
-		upvotes: 0,
+    },
+    'my-thoughts-on-resumes': {
+        upvotes: 0,
         comments: []
-	}
+    }
 }
 
 // app.get("/hello", (req, res) => {
@@ -36,31 +36,51 @@ const articlesInfo = {
 app.get('/api/articles/:name', async (req, res) => {
     try {
         const articleName = req.params.name;
-        const uri = "mongodb+srv://jacinto:"+encodeURIComponent("D4VkaYik#lG5")+"@toilets-au.kbefj.mongodb.net/test?retryWrites=true&w=majority";
-        const client = await MongoClient.connect(uri,{ useNewUrlParser: true });
+        const uri = "mongodb+srv://jacinto:" + encodeURIComponent("D4VkaYik#lG5") + "@toilets-au.kbefj.mongodb.net/test?retryWrites=true&w=majority";
+        const client = await MongoClient.connect(uri, { useNewUrlParser: true });
         const db = client.db('test')
-        const articleInfo = await db.collection('test').findOne({name: articleName})
+        const articleInfo = await db.collection('test').findOne({ name: articleName })
         res.status(200).json(articleInfo);
         console.log(articleInfo)
         client.close()
-    } catch(err) {
+    } catch (err) {
         console.log(err)
-        res.status(500).json({message: "something went wrong", err})
+        res.status(500).json({ message: "something went wrong", err })
     }
-    
+
 })
 
-app.post("/api/articles/:name/upvote", (req,res) => {
-    const articleName = req.params.name;
-    articlesInfo[articleName].upvotes += 1;
-    res.status(200).send(`Article ${articleName} now has ${articlesInfo[articleName].upvotes} upvotes`)
+app.post("/api/articles/:name/upvote", async (req, res) => {
+    try {
+        const articleName = req.params.name;
+        const uri = "mongodb+srv://jacinto:" + encodeURIComponent("D4VkaYik#lG5") + "@toilets-au.kbefj.mongodb.net/test?retryWrites=true&w=majority";
+        const client = await MongoClient.connect(uri, { useNewUrlParser: true });
+        const db = client.db('test')
+        const articleInfo = await db.collection('test').findOne({ name: articleName })
+
+        const testing = await db.collection('test').updateOne({ name: articleName },
+            {
+                '$set': {
+                    upvotes: articleInfo.upvotes + 1,
+                }
+            }
+        );
+        console.log(testing);
+
+        const updatedArticleInfo = await db.collection('test').findOne({ name: articleName })
+        res.status(200).json(updatedArticleInfo);
+        client.close()
+    } catch (err) {
+        console.log(err)
+        res.status(500).json({ message: "something went wrong", err })
+    }
 })
 
-app.post("/api/articles/:name/add-comment", (req,res) => {
+app.post("/api/articles/:name/add-comment", (req, res) => {
 
-    const {username, text } = req.body
+    const { username, text } = req.body
     const articleName = req.params.name;
-    articlesInfo[articleName].comments.push({username,text});
+    articlesInfo[articleName].comments.push({ username, text });
     res.status(200).send(articlesInfo[articleName])
 })
 
