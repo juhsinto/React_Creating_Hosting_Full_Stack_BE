@@ -32,56 +32,66 @@ const articlesInfo = {
 //     res.send(`Hello ${req.params.name}`)
 // })
 
-
-app.get('/api/articles/:name', async (req, res) => {
-    try {
-        const articleName = req.params.name;
+const withDB = async (operations, res) => {
+	try {
+        
         const uri = "mongodb+srv://jacinto:" + encodeURIComponent("D4VkaYik#lG5") + "@toilets-au.kbefj.mongodb.net/test?retryWrites=true&w=majority";
         const client = await MongoClient.connect(uri, { useNewUrlParser: true });
         const db = client.db('test')
-        const articleInfo = await db.collection('test').findOne({ name: articleName })
-        res.status(200).json(articleInfo);
-        console.log(articleInfo)
+
+        await operations(db)
+        
         client.close()
     } catch (err) {
         console.log(err)
         res.status(500).json({ message: "something went wrong", err })
     }
+}
 
+
+app.get('/api/articles/:name', async (req, res) => {
+    withDB(async (db) => {
+        const articleName = req.params.name;
+        const articleInfo = await db.collection('test').findOne({ name: articleName })
+        res.status(200).json(articleInfo);
+        console.log(articleInfo)
+    }, res)
 })
 
 app.post("/api/articles/:name/upvote", async (req, res) => {
-    try {
-        const articleName = req.params.name;
-        const uri = "mongodb+srv://jacinto:" + encodeURIComponent("D4VkaYik#lG5") + "@toilets-au.kbefj.mongodb.net/test?retryWrites=true&w=majority";
-        const client = await MongoClient.connect(uri, { useNewUrlParser: true });
-        const db = client.db('test')
+    withDB(async (db) => {
+    
+        const articleName = req.params.name; 
         const articleInfo = await db.collection('test').findOne({ name: articleName })
-
         const testing = await db.collection('test').updateOne({ name: articleName },
             {
                 '$set': {
                     upvotes: articleInfo.upvotes + 1,
                 }
             }
-        );
-        console.log(testing);
-
+        );    
         const updatedArticleInfo = await db.collection('test').findOne({ name: articleName })
         res.status(200).json(updatedArticleInfo);
-        client.close()
-    } catch (err) {
-        console.log(err)
-        res.status(500).json({ message: "something went wrong", err })
-    }
+    }, res)
 })
 
 app.post("/api/articles/:name/add-comment", (req, res) => {
+    withDB(async (db) => {
+    
+        const { username, text } = req.body
+        const articleName = req.params.name;
 
-    const { username, text } = req.body
-    const articleName = req.params.name;
-    articlesInfo[articleName].comments.push({ username, text });
-    res.status(200).send(articlesInfo[articleName])
+        const articleInfo = await db.collection('test').findOne({ name: articleName })
+        const testing = await db.collection('test').updateOne({ name: articleName },
+            {
+                '$set': {
+                    comments: articleInfo.comments.concat({username, text})
+                }
+            }
+        );    
+        const updatedArticleInfo = await db.collection('test').findOne({ name: articleName })
+        res.status(200).json(updatedArticleInfo);
+    }, res)
 })
 
 app.listen(8000, () => console.log("listening on port 8000"))
